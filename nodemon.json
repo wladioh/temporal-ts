@@ -1,0 +1,13 @@
+{
+	"exec": "ts-node -r tsconfig-paths/register -r dotenv/config --pretty --transpile-only",
+	"watch": ["src/"],
+	"ignore": ["./src/routes/*"],
+	"ext": "ts",
+	"events": {
+		"start": "yarn build:routes"
+	},
+	"execMap": {
+		"ts": "ts-node"
+	},
+	"restartable": "rs"
+}

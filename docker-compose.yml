@@ -1,0 +1,14 @@
+# Use the official image as a parent image.
+version: "3"
+services:
+  bff:
+    build: .
+    container_name: poc-optl
+    env_file:
+      - ./.env
+    # environment:
+    #   - NODE_ENV=DEVELOPMENT
+    #   - REDIS_HOST=redis
+    ports:
+      - "8080:8080"
+      - "8081:8081"
