@@ -1,13 +1,20 @@
 import { ListConfigurationSettingsOptions } from "@azure/app-configuration";
 import { AppConfigurationService } from "./AppConfigurationService";
 import { IWatcherStrategy, KeyValue } from "@app-config";
-import { ServiceBusClient } from "@azure/service-bus";
+import { EventHubConsumerClient } from "@azure/event-hubs";
+
+import {
+	AzureCliCredential,
+	ChainedTokenCredential,
+	ManagedIdentityCredential,
+	EnvironmentCredential,
+} from "@azure/identity";
 export type AppConfigurationWatcherServiceBus = {
 	service: AppConfigurationService;
 	connectionString: string;
 	filter: ListConfigurationSettingsOptions;
-	topicName: string;
-	subscriptionName: string;
+	eventHubName: string;
+	consumerGroup: string;
 };
 export class AppConfigurationWatcher implements IWatcherStrategy {
 	private valuesCallback?: (values: KeyValue) => void;
@@ -30,27 +37,36 @@ export class AppConfigurationWatcher implements IWatcherStrategy {
 	}
 
 	static WithAzureServiceBus(configs: AppConfigurationWatcherServiceBus) {
-		const serviceBusClient = new ServiceBusClient(configs.connectionString);
-
+		const credential = new ChainedTokenCredential(
+			new ManagedIdentityCredential(),
+			new AzureCliCredential(),
+			new EnvironmentCredential()
+		);
 		const watcher = new AppConfigurationWatcher(
 			configs.service,
 			configs.filter
 		);
-		const receiver = serviceBusClient.createReceiver(configs.topicName);
-		const myMessageHandler = async (messageReceived) => {
-			const { key, label } = messageReceived.body.data;
-			watcher.OnChange(key, label);
-		};
+		const consumerClient = new EventHubConsumerClient(
+			configs.consumerGroup,
+			configs.connectionString,
+			configs.eventHubName,
+			credential
+		);
 
-		// function to handle any errors
-		const myErrorHandler = async (error) => {
-			console.log(error);
-		};
-
-		// subscribe and specify the message and error handlers
-		receiver.subscribe({
-			processMessage: myMessageHandler,
-			processError: myErrorHandler,
+		consumerClient.subscribe({
+			processEvents: async (events, context) => {
+				// event processing code goes here
+				if (events.length > 0) {
+					events.forEach((element) => {
+						const { key, label } = element.body[0].data;
+						watcher.OnChange(key, label);
+					});
+				}
+			},
+			processError: async (error, context) => {
+				// error reporting/handling code here
+				console.log(error);
+			},
 		});
 		return watcher;
 	}

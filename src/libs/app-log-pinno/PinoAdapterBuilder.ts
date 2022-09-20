@@ -3,7 +3,7 @@ import pinoElastic from "pino-elasticsearch";
 import pino from "pino";
 import { PinoAdapter } from "./PinoAdapter";
 import { PinoConfig, PinoElasticSearchConfig } from "./PinoConfig";
-import { defaulTransporter } from "./defaulTransporter";
+import { defaultTransporter } from "./defaulTransporter";
 const defaultConfig: PinoElasticSearchConfig = {
 	CONSISTENCY: "one",
 	INDEX: "service.logs",
@@ -14,12 +14,13 @@ const defaultConfig: PinoElasticSearchConfig = {
 export const PinoElasticSearchAdapterBuilder = (
 	configuration?: PinoElasticSearchConfig
 ): ILoggerAdapter => {
-	const prettyStream = defaulTransporter();
+	const prettyStream = defaultTransporter();
 	const streams = [{ stream: prettyStream }];
-	const config = Object.assign<{}, PinoElasticSearchConfig>(
-		configuration || {},
-		defaultConfig
-	);
+	const config = Object.assign<
+		Partial<PinoElasticSearchConfig>,
+		PinoElasticSearchConfig | undefined,
+		PinoElasticSearchConfig
+	>({}, configuration, defaultConfig);
 	if (configuration) {
 		const streamToElastic = pinoElastic({
 			index: config.INDEX,
@@ -44,7 +45,6 @@ export const PinoElasticSearchAdapterBuilder = (
 		});
 		streams.push({ stream: streamToElastic });
 	}
-	pino.multistream(streams);
 	const logger = pino({ level: config.LOG_LEVEL }, pino.multistream(streams));
 	return new PinoAdapter(logger);
 };
@@ -52,10 +52,8 @@ export const PinoElasticSearchAdapterBuilder = (
 export const PinoAdapterBuilder = (
 	configuration?: PinoConfig
 ): ILoggerAdapter => {
-	const prettyStream = defaulTransporter();
-	const streams = [{ stream: prettyStream }];
-	pino.multistream(streams);
+	const prettyStream = defaultTransporter();
 	const level = configuration?.LOG_LEVEL || LogLevel.info;
-	const logger = pino({ level }, pino.multistream(streams));
+	const logger = pino({ level }, prettyStream);
 	return new PinoAdapter(logger);
 };

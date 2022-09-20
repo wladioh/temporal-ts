@@ -1,15 +1,15 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { createFallbackPolicy } from "./policies/FallbackPolicy";
 import httpAdapter from "axios/lib/adapters/http";
-import { defaultConfig, PolicyConfig } from "./DefaultConfig";
+import { defaultConfig } from "./DefaultConfig";
 import { CachePolicy } from "./policies/CachePolicy";
 import { IPolicy } from "cockatiel";
 
-type Adpter = (c: AxiosRequestConfig) => Promise<any>;
-export const BuildResiliencyAdpter = (
+type Adapter = (c: AxiosRequestConfig) => Promise<any>;
+export const BuildResiliencyAdapter = (
 	p: IPolicy,
 	cachePolicy: CachePolicy | undefined
-): Adpter => {
+): Adapter => {
 	return (c: AxiosRequestConfig): Promise<any> => {
 		const policy = createFallbackPolicy(
 			c,

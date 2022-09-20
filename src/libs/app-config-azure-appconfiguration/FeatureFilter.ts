@@ -1,4 +1,4 @@
-import { FeatureFlagValue } from "@azure/app-configuration";
+import { FeatureFlagValue, UserFeature } from "@app-config";
 type TargetFilter = {
 	Audience: {
 		Groups: Array<{ Name: string; RolloutPercentage: number }>;
@@ -7,14 +7,9 @@ type TargetFilter = {
 	};
 };
 
-type WindownFilter = {
+type WindowFilter = {
 	End: string;
 	Start: string;
-};
-
-type UserFeature = {
-	userId: string;
-	roles: Array<string>;
 };
 
 enum Type {
@@ -36,13 +31,13 @@ export class FeatureFilter {
 	}
 	private static CheckClientTarget(
 		clientFilter: ClientFilter,
-		user?: UserFeature
+		user?: Partial<UserFeature>
 	) {
 		const target: TargetFilter = <any>clientFilter.parameters;
 		if (user) {
-			if (target.Audience.Users.includes(user.userId)) return true;
+			if (target.Audience.Users.includes(user.userId ?? "")) return true;
 			const group = target.Audience.Groups.find((it) =>
-				user.roles.includes(it.Name)
+				user.groups?.includes(it.Name)
 			);
 			if (group) {
 				return this.CalcPercentagem(group.RolloutPercentage);
@@ -53,14 +48,17 @@ export class FeatureFilter {
 
 	private static CheckTimeWindow(clientFilter: ClientFilter) {
 		// Changes the start time
-		const filter: WindownFilter = <any>clientFilter.parameters;
+		const filter: WindowFilter = <any>clientFilter.parameters;
 		const startDate = new Date(filter.Start);
 		const endDate = new Date(filter.End);
 		const now = new Date();
 		return startDate < now && now < endDate;
 	}
 
-	static IsEnabled(feature?: FeatureFlagValue, user?: UserFeature): boolean {
+	static IsEnabled(
+		feature?: FeatureFlagValue,
+		user?: Partial<UserFeature>
+	): boolean {
 		if (!feature || !feature.enabled) return false;
 		for (const clientFilter of feature.conditions.clientFilters) {
 			clientFilter.parameters = clientFilter.parameters ?? {};
@@ -79,6 +77,6 @@ export class FeatureFilter {
 					return false;
 			}
 		}
-		return false;
+		return feature.enabled;
 	}
 }

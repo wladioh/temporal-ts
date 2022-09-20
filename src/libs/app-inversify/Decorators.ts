@@ -2,10 +2,11 @@ import { TYPES } from "./TYPES";
 import { inject } from "inversify";
 import { fluentProvide } from "inversify-binding-decorators";
 import { interfaces } from "inversify";
+import { DecoratorTarget } from "inversify/lib/annotation/decorator_utils";
 
 export function loggerFactory() {
 	return (
-		target: Object,
+		target: DecoratorTarget<unknown>,
 		propertyKey: string | symbol,
 		parameterIndex: number
 	) => {
@@ -15,7 +16,7 @@ export function loggerFactory() {
 
 export function logger() {
 	return (
-		target: Object,
+		target: DecoratorTarget<unknown>,
 		propertyKey: string | symbol,
 		parameterIndex: number
 	) => {
@@ -25,7 +26,7 @@ export function logger() {
 
 export function loggerAdapter() {
 	return (
-		target: Object,
+		target: DecoratorTarget<unknown>,
 		propertyKey: string | symbol,
 		parameterIndex: number
 	) => {
@@ -35,7 +36,7 @@ export function loggerAdapter() {
 
 export function config() {
 	return (
-		target: Object,
+		target: DecoratorTarget<unknown>,
 		propertyKey: string | symbol,
 		parameterIndex: number
 	) => {

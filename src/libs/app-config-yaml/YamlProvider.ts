@@ -14,7 +14,7 @@ export class YamlProvider implements IConfigurationProvider {
 	async Load(configs: KeyValue): Promise<KeyValue> {
 		let config = {};
 		try {
-			let files = this.paths
+			const files = this.paths
 				.map((it) => glob.sync(it))
 				.reduce((ac, it) => ac.concat(it), [])
 				.map((it) => path.resolve(it))

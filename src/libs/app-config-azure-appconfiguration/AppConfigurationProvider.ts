@@ -1,9 +1,6 @@
 import { ListConfigurationSettingsOptions } from "@azure/app-configuration";
 import { IConfigurationProvider, KeyValue } from "@app-config";
-import {
-	AppConfigurationConfig,
-	AppConfigurationService,
-} from "./AppConfigurationService";
+import { AppConfigurationService } from "./AppConfigurationService";
 
 type AppConfigurationProviderConfig = {
 	filter: ListConfigurationSettingsOptions;

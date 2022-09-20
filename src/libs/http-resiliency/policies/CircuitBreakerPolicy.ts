@@ -1,5 +1,5 @@
 import { ILogger } from "@app-api/LoggerApi";
-import { Policy, SamplingBreaker } from "cockatiel";
+import { SamplingBreaker, circuitBreaker, Policy } from "cockatiel";
 export interface CircuitBreakerConfig {
 	halfOpenAfter: number;
 	threshold: number;
@@ -12,10 +12,10 @@ export const circuitBreakerPolicy = (
 	config: CircuitBreakerConfig,
 	logger: ILogger
 ) => {
-	const breaker = handlerResults.circuitBreaker(
-		config.halfOpenAfter,
-		new SamplingBreaker(config)
-	);
+	const breaker = circuitBreaker(handlerResults, {
+		halfOpenAfter: config.halfOpenAfter,
+		breaker: new SamplingBreaker(config),
+	});
 	breaker.onBreak(() => {
 		logger.error(
 			"Circuit Breaker Open after %s percent of failures in %s seconds. This is going half close after %s seconds.",

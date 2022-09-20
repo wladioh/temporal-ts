@@ -1,9 +1,13 @@
 import { ContextManager, IContextManager } from "@app-context-manager";
 import { Request, Response } from "express";
 
-export const customerCpfKey = "x-customer-cpf";
-export const customerAccountPan = "x-account-pan";
 export const cacheKey = "cache-control";
+export const keys = {
+	userIp: "device-ip",
+	deviceId: "device-id",
+	diebold: "diebold-info",
+	userAgent: "user-agent",
+};
 
 export const ignoreCache = () => ContextManager.Context.get(cacheKey) === true;
 
@@ -14,9 +18,12 @@ export const ContextFiller = (
 ) => {
 	const isNoCache =
 		request.headers["cache-control"]?.toLocaleLowerCase() === "no-cache";
-	const cpf = request.headers["x-account-cpf"];
-	const accountPan = request.headers["x-account-pan"];
 	context.set(cacheKey, isNoCache);
-	context.set(customerCpfKey, cpf);
-	context.set(customerAccountPan, accountPan);
+	const ip =
+		request.headers["X-Real-Ip"] ??
+		request.headers["X-Forwarded-For"] ??
+		"0.0.0.0";
+	context.set(keys.userIp, ip);
+	const userAgent = request.headers["user-agent"] ?? "none";
+	context.set(keys.userAgent, userAgent);
 };

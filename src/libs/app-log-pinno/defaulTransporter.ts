@@ -1,5 +1,5 @@
 import pretty from "pino-pretty";
-export const defaulTransporter = () => {
+export const defaultTransporter = () => {
 	return pretty({
 		colorize: true,
 		hideObject: true,
@@ -9,7 +9,7 @@ export const defaulTransporter = () => {
 			// do some log message customization
 			if (log.trace_id)
 				return `${log.scope ?? ""} [${log.trace_id}] - ${log[messageKey]}`;
-			else return `${log.scope ?? ""} - ${log[messageKey]}`;
+			return `${log.scope ?? ""} - ${log[messageKey]}`;
 		},
 	});
 };

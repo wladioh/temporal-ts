@@ -1,17 +1,22 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import {
-	Policy,
 	IPolicy,
 	BrokenCircuitError,
 	TaskCancelledError,
 	BulkheadRejectedError,
 	IsolatedCircuitError,
+	handleWhenResult,
+	IDefaultPolicyContext,
+	fallback as Fallback,
+	wrap,
+	noop,
 } from "cockatiel";
 import lodash from "lodash";
 
 export type FallbackOptions = {
 	status?: Array<number>;
 	data: Required<any>;
+	whenResult?: (response: AxiosResponse) => boolean;
 };
 
 export type FallbackConfig = {
@@ -24,7 +29,7 @@ export const createFallbackPolicy = (
 	c: AxiosRequestConfig,
 	defaultConfig: FallbackConfig,
 	policy: IPolicy
-): IPolicy => {
+): IPolicy<IDefaultPolicyContext, AxiosResponse> => {
 	const fallback: FallbackConfig = lodash.merge<FallbackConfig, any>(
 		defaultConfig,
 		c.fallback
@@ -39,19 +44,20 @@ export const createFallbackPolicy = (
 			headers: {},
 			request: c,
 		};
-		const fallbackPolicy = Policy.handleWhenResult((it: AxiosResponse) =>
+		const defaultFaultBackPolicy = handleWhenResult((it: AxiosResponse) =>
 			fallback.status.includes(it.status)
 		)
 			.orWhenResult(fallback.whenResult)
 			.orType<BrokenCircuitError>(BrokenCircuitError)
 			.orType<IsolatedCircuitError>(IsolatedCircuitError)
 			.orType<TaskCancelledError>(TaskCancelledError)
-			.orType<BulkheadRejectedError>(BulkheadRejectedError)
-			.fallback(() => fallbackResult);
-
-		if (policy) return Policy.wrap(fallbackPolicy, policy);
-		return Policy.wrap(fallbackPolicy);
+			.orType<BulkheadRejectedError>(BulkheadRejectedError);
+		const fallbackPolicy = Fallback(defaultFaultBackPolicy, () => {
+			return fallbackResult;
+		});
+		if (policy) return wrap(fallbackPolicy, policy);
+		return wrap(fallbackPolicy);
 	}
 	if (policy) return policy;
-	return Policy.noop;
+	return noop;
 };

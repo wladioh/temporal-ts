@@ -2,12 +2,14 @@ import { ICacheProvider } from "@app-api/ICacheProvider";
 import { InMemoryCacheProvider } from "@app-cache-memory";
 import { container, LoggerFactory } from "@app-inversify";
 import { Configuration } from "@config";
-import { Api, AuthInterceptor, LoggerInterceptor } from "@http-client";
+import { Api, IInterceptor, LoggerInterceptor } from "@http-client";
 import { CreateResiliencyConfig } from "@http-resiliency";
-import { ApiAuthentication } from "@utils/ApiAuthentication";
 import { TYPES } from "@utils/TYPES";
 import { interfaces, AsyncContainerModule } from "inversify";
 import { ServicesTokens } from "../tokens";
+import https from "https";
+import { ApiAuthenticationInterceptor } from "@utils/service-authentication/ApiAuthenticationInterceptor";
+import { ApiAuthenticationStrategy } from "@utils/service-authentication/ApiAuthenticationStrategy";
 
 const resiliencyConfig = {
 	cache: {
@@ -26,38 +28,50 @@ const resiliencyConfig = {
 };
 
 export const ApiContainerModule = (
-	description: string,
+	identifier: symbol,
 	url: string,
-	identifier: interfaces.ServiceIdentifier<Api>
+	...interceptors: Array<IInterceptor>
 ): AsyncContainerModule => {
 	return new AsyncContainerModule(async (bind: interfaces.Bind) => {
+		const config = container.get<Configuration>(TYPES.Configuration);
 		const logManager = container.get<LoggerFactory>(TYPES.LoggerFactory);
 		const cacheProvider = container.get<ICacheProvider>(ServicesTokens.Cache);
-		const logger = logManager(description);
-		const apiConfig = CreateResiliencyConfig(logger, {
+		const apilogger = logManager(
+			identifier.description ?? identifier.toString()
+		);
+		const httpsAgent = new https.Agent({
+			rejectUnauthorized: false,
+		});
+		let apiConfig: any = {
 			baseURL: url,
+			httpsAgent: httpsAgent,
 			validateStatus: (status: number) => status !== 401 && status !== 403,
+		};
+		apiConfig = CreateResiliencyConfig(apilogger, {
+			...apiConfig,
 			resiliency: {
 				...resiliencyConfig,
 				cache: { provider: cacheProvider },
 			},
 		});
-		const auth = container.get<AuthInterceptor>(AuthInterceptor);
-		const api = new Api(apiConfig, new LoggerInterceptor(logger), auth);
+
+		const logger = logManager("API-AUTH-INTERCEPTOR");
+		const authInterceptor = new ApiAuthenticationInterceptor(
+			new ApiAuthenticationStrategy(config, logger),
+			config
+		);
+		const api = new Api(
+			apiConfig,
+			new LoggerInterceptor(logger),
+			authInterceptor,
+			...interceptors
+		);
 		bind<Api>(identifier).toConstantValue(api);
 	});
 };
 
 export const CoreContainerModule = (): AsyncContainerModule => {
 	return new AsyncContainerModule(async (bind: interfaces.Bind) => {
-		const logger = container.get<LoggerFactory>(TYPES.LoggerFactory)(
-			"AUTH-INTERCEPTOR"
-		);
-		const config = container.get<Configuration>(TYPES.Configuration);
-
-		bind<AuthInterceptor>(AuthInterceptor).toConstantValue(
-			new AuthInterceptor(new ApiAuthentication(), logger)
-		);
 		// TODO: UTILIZAR UM PROVEDOR DE CACHE REDIS const cacheProvider = new IoRedisCacheProvider();
 		bind<ICacheProvider>(ServicesTokens.Cache).toConstantValue(
 			new InMemoryCacheProvider()

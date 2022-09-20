@@ -30,7 +30,7 @@ export class ConfigurationBuilder<T extends BaseConfiguration>
 	private _config: T;
 	private _providers: PromiseProvider<T>[] = [];
 	private _watchers: PromiseWatcher<T>[] = [];
-	private _listenners: Array<(config: T) => void> = [];
+	private _listeners: Array<(config: T) => void> = [];
 
 	public AddProvider(
 		provider: PromiseProvider<T> | IConfigurationProvider
@@ -52,17 +52,25 @@ export class ConfigurationBuilder<T extends BaseConfiguration>
 	}
 
 	OnUpdate(eventListener: (config: T) => void): void {
-		this._listenners.push(eventListener);
+		this._listeners.push(eventListener);
 	}
 
 	private UpdateConfig(values: KeyValue): void {
 		this.logger.info("Configuration Updating");
-		const validation = this.schema.validate(
-			{ ...this._config, ...values },
-			{
+		const schema = {};
+		for (const key in values) {
+			const s = this.schema.extract(key);
+			schema[key] = s;
+		}
+		const validation = Joi.object(schema)
+			.unknown(false)
+			.options({
+				abortEarly: false,
+				stripUnknown: { arrays: false, objects: true },
+			})
+			.validate(values, {
 				convert: true,
-			}
-		);
+			});
 		if (validation.error) {
 			const errors = validation.error.details
 				.map((it) => it.message)
@@ -70,12 +78,14 @@ export class ConfigurationBuilder<T extends BaseConfiguration>
 			this.logger.warn("Configuration can`t be updated, Erros: \r\n%s", errors);
 			return;
 		}
-		lodash.merge(this._config, validation.value);
+		for (const key in values) {
+			this._config[key] = validation.value[key];
+		}
 		this.NotifyListeners();
 		this.logger.info("Configuration Updated");
 	}
 	NotifyListeners() {
-		for (const iterator of this._listenners) {
+		for (const iterator of this._listeners) {
 			this.CallListener(iterator);
 		}
 	}
@@ -100,6 +110,7 @@ export class ConfigurationBuilder<T extends BaseConfiguration>
 			const values = await provider.Load(config);
 			config = lodash.merge(config, values);
 		}
+
 		const validation = this.schema.validate(config, {
 			convert: true,
 		});

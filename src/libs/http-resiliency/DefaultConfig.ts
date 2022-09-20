@@ -27,7 +27,7 @@ export type PolicyConfig = {
 
 export interface BulkheadConfig {
 	queueSize: number;
-	limitParalleRequest: number;
+	limitParallelRequest: number;
 }
 
 export const retryStatus = [
@@ -55,7 +55,7 @@ export const defaultConfig: PolicyConfig = {
 	},
 	bulkhead: {
 		queueSize: 10,
-		limitParalleRequest: 10,
+		limitParallelRequest: 10,
 	},
 	fallback: {
 		status: retryStatus,

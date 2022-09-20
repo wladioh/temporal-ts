@@ -14,6 +14,7 @@ import { container } from "./Container";
 import Joi from "joi";
 import { ServiceConfigureFunc } from "./index";
 import { PinoAdapterBuilder } from "@app-log-pinno";
+import { Container } from "inversify";
 
 export type LoggerFactory = (parent: string) => ILogger;
 export class StartupBuilder<T extends BaseConfiguration> {
@@ -64,8 +65,7 @@ export class StartupBuilder<T extends BaseConfiguration> {
 		this.configWatchers.forEach((it) => builder.AddWatcher(it));
 		return builder;
 	}
-
-	async Run(run: ServiceConfigureFunc): Promise<void> {
+	async Configure(): Promise<Container> {
 		const logManager = new LoggerManager(this.adapterBuilder());
 		const configurationBuilder = await this.SetupConfig(logManager);
 		const store = await configurationBuilder.Load();
@@ -87,19 +87,29 @@ export class StartupBuilder<T extends BaseConfiguration> {
 
 		container.bind<ILogger>(TYPES.LOGGER).toDynamicValue((context) => {
 			if (!context.currentRequest.parentRequest)
-				throw Error("DONT HAVE CONTEXT");
+				throw Error("DON`T HAVE CONTEXT");
 			const service =
 				context.currentRequest.parentRequest.target.serviceIdentifier;
 			const ctx = (service["name"] || service).toUpperCase();
 			return context.container.get<LoggerFactory>(TYPES.LoggerFactory)(ctx);
 		});
-
 		const log = logManager.Get("STARTUP");
 		try {
 			await this.configureServices(container);
+		} catch (error) {
+			log.error("ERROR TO REGISTER SERVICES %s", error);
+		}
+		return container;
+	}
+	async Run(run: ServiceConfigureFunc): Promise<void> {
+		const container = await this.Configure();
+		const logManager = container.get<LoggerManager>(LoggerManager);
+		const log = logManager.Get("STARTUP");
+		try {
 			await run(container);
 		} catch (error) {
 			log.error("STARTUP FAIL %s", error);
+			throw error;
 		}
 	}
 }

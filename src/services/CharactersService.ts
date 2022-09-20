@@ -1,22 +1,35 @@
-import { provideSingleton } from "@app-inversify";
-import Result from "fluent-type-results";
-import { Result as Res } from "type-result";
+import { logger, provideSingleton } from "@app-inversify";
+import { ILogger } from "@app-log";
+import { Api } from "@http-client";
+import { CharactersApi } from "@utils/decorators/ApiDecorators";
+import { Result } from "type-result";
 
 export interface Character {
+	id: string;
 	name: string;
 	friends: string[];
 }
-
-const resources: Character[] = [];
 @provideSingleton(CharactersService) // or @provide(FooService)
 export class CharactersService {
-	all(): PromiseLike<Result<Character[]>> {
-		return Promise.resolve(Result.Ok(resources));
+	constructor(
+		@CharactersApi()
+		private readonly paymentsApi: Api,
+		@logger()
+		private readonly logger: ILogger
+	) {}
+	async add(character: Character): Promise<Result<void, string>> {
+		const response = await this.paymentsApi.post("/v1", character);
+		if (response.status !== 200) return Result.fail("Problems happens =)");
+		return Result.ok();
 	}
-	add(character: Character) {
-		resources.push(character);
+	async get(): Promise<Result<Character[], string>> {
+		const response = await this.paymentsApi.get("/v1");
+		if (response.status !== 200) return Result.fail("Problems happens =)");
+		return Result.ok(response.data);
 	}
-	get(): Res<string, string> {
-		return Res.fail("");
+	async getById(id: string): Promise<Result<Character, string>> {
+		const response = await this.paymentsApi.get(`/v1/${id}`);
+		if (response.status !== 200) return Result.fail("Problems happens =)");
+		return Result.ok(response.data);
 	}
 }

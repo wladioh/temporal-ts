@@ -19,7 +19,7 @@ export class OrderController extends Controller {
 	public async MakeOrder(
 		@Res() notFoundResponse: TsoaResponse<404, { reason: string }>
 	): Promise<{ orderId: string }> {
-		this.logger.info("Start getCharacter..");
+		this.logger.info("Start Order..");
 		const cartId = uuidv4();
 		const handle = await this.client.start(RequestOrderCreateWorkflow, {
 			workflowId: cartId,

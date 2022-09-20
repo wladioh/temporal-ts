@@ -38,7 +38,7 @@ export const cancelOrder = async (
 	const handle = await client.getHandle(cartId);
 	const describe = await handle.describe();
 	const wfIsRunning =
-		describe.status ==
+		describe.status.code ==
 		temporal.api.enums.v1.WorkflowExecutionStatus
 			.WORKFLOW_EXECUTION_STATUS_RUNNING;
 	if (wfIsRunning) {

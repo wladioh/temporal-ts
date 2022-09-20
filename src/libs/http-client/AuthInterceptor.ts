@@ -1,18 +1,18 @@
-import { ILogger } from "@app-api/LoggerApi";
 import { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { IInterceptor } from "./IInterceptor";
 import { IAuthorizationStrategy } from "./IAuthorizationStrategy";
-
 export class AuthInterceptor implements IInterceptor {
 	private api: AxiosInstance;
-	private token: Promise<string> | undefined;
-	private renewingToken: Promise<void> = Promise.resolve();
-	constructor(
-		private strategy: IAuthorizationStrategy,
-		private logger: ILogger
-	) {}
+	private _token?: string;
+	public async token(): Promise<string> {
+		if (!this._token) this._token = await this.strategy.getToken(this.api);
+		return this._token;
+	}
+
+	constructor(private strategy: IAuthorizationStrategy) {}
 
 	register(axios: AxiosInstance): void {
+		this.api = axios;
 		axios.interceptors.request.use(this.RequestInjectToken.bind(this));
 		axios.interceptors.response.use(
 			this.OnResponseFulfilled.bind(this),
@@ -24,17 +24,17 @@ export class AuthInterceptor implements IInterceptor {
 		return response;
 	}
 
+	public InjectToken(axiosConfig: AxiosRequestConfig, token: string): void {
+		axiosConfig.headers = axiosConfig.headers ?? {};
+		axiosConfig.headers.Authorization = token;
+	}
+
 	private async RequestInjectToken(
 		axiosConfig: AxiosRequestConfig
 	): Promise<AxiosRequestConfig> {
 		if (axiosConfig.anonymous) return axiosConfig;
-		await this.renewingToken;
-		const token = await (this.token ??
-			(this.token = this.strategy.getToken(this.api)));
-		if (!Boolean(token))
-			this.logger.error("request is authenticated and token is undefined.");
-		axiosConfig.headers = axiosConfig.headers ?? {};
-		axiosConfig.headers.Authorization = token;
+		const token = await this.token();
+		this.InjectToken(axiosConfig, token);
 		return axiosConfig;
 	}
 
@@ -48,12 +48,7 @@ export class AuthInterceptor implements IInterceptor {
 			this.strategy.isNecessaryRenewToken(this.api, error)
 		) {
 			error.config["authenticating"] = true;
-			this.renewingToken = new Promise<void>(async (resolve) => {
-				await this.strategy.refreshToken(this.api);
-				this.token = undefined;
-				resolve();
-			});
-			await this.renewingToken;
+			await this.strategy.refreshToken(this.api);
 			return this.api.request(error.config);
 		}
 

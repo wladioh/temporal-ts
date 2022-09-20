@@ -1,6 +1,6 @@
 import cls from "cls-hooked";
 
-export interface IContextManager extends cls.Namespace {}
+export type IContextManager = cls.Namespace;
 export class ContextManager {
 	private static namespace: IContextManager;
 

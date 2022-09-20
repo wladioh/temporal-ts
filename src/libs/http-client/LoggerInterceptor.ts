@@ -37,7 +37,13 @@ export class LoggerInterceptor implements IInterceptor {
 		axiosConfig.startTime = Date.now();
 		return axiosConfig;
 	}
-
+	safeParseJson(json: any): string {
+		try {
+			return JSON.stringify(json);
+		} catch (e) {
+			return "";
+		}
+	}
 	private async OnResponseErrorLogger(error: AxiosError): Promise<unknown> {
 		let startupDuration = 0;
 
@@ -46,16 +52,18 @@ export class LoggerInterceptor implements IInterceptor {
 			startupDuration = Date.now() - startTime;
 		}
 		this.logger.error(
-			"END | STATUS %s | TIME %sms | FROM CACHE FALSE | RES %s %s",
+			"END | STATUS %s | TIME %sms | FROM CACHE FALSE | RES %s %s %s",
 			error.response?.status || -1,
 			startupDuration,
 			error.config?.method?.toUpperCase() || "",
-			error.config?.url
+			error.config?.url,
+			this.safeParseJson(error.response?.data)
 		);
 
 		this.logger.debug(
-			"RESPONSE BODY %s",
-			error.message || error.response?.data
+			"RESPONSE BODY %s %s",
+			error.message || error.response?.data,
+			error.stack
 		);
 
 		return Promise.reject(error);
@@ -65,7 +73,7 @@ export class LoggerInterceptor implements IInterceptor {
 		const startTime = response.config.startTime ?? Date.now();
 		const startupDuration = Date.now() - startTime;
 		const cached = response.request?.fromCache ? "TRUE" : "FALSE";
-		const isFallback = response.isFallback ? "| FALLBACKED " : "";
+		const isFallback = response.isFallback ? "| FALLBACK " : "";
 		this.logger.info(
 			"END | STATUS %s | TIME %sms | FROM CACHE %s %s| RES %s %s",
 			response.status || "",
@@ -82,7 +90,7 @@ export class LoggerInterceptor implements IInterceptor {
 	}
 
 	private async OnRequestErrorLogger(error: AxiosError): Promise<unknown> {
-		this.logger.error("REQUEST ERROR %s", error.message);
+		this.logger.error("REQUEST ERROR %s %s", error.message, error.stack);
 		return Promise.reject(error);
 	}
 }

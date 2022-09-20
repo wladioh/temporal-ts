@@ -2,6 +2,7 @@
 ### Dependencias
 - node >= 14
 - yarn
+- https://smallsharpsoftwaretools.com/tutorials/use-colima-to-run-docker-containers-on-macos/
 
 É recomendado a utilização do [nvm](https://github.com/nvm-sh/nvm) ou [asdf](https://asdf-vm.com/guide/getting-started.html#_1-install-dependencies) para ter a capacidade de trocar de versões do node de acordo com a necessidade.
 ### Configuração VS Code

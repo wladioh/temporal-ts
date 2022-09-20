@@ -1,7 +1,5 @@
 import { IConfigurationStore } from "@app-api/IConfigurationStorage";
-import { ILogger } from "@app-log";
 import Joi from "joi";
-import { BaseConfiguration } from "./schema";
 
 export const UrlPattern = () =>
 	Joi.string()

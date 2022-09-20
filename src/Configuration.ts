@@ -1,78 +1,58 @@
 import Joi from "joi";
 import {
-	BuildSchema,
 	UrlPattern,
-	PromiseProvider,
 	BaseConfiguration,
+	ConfigurationSchemaBuilder,
 } from "@app-config";
-import {
-	AppConfigurationProvider,
-	AppConfigurationService,
-	AppConfigurationWatcher,
-} from "@app-config-azure-appconfiguration";
-import { FeatureFlagValue } from "@azure/app-configuration";
-import { container } from "@app-inversify";
+import { FeatureFlags, FeatureFlagSchema } from "./FeatureFlags";
 
-export type Configuration = BaseConfiguration & {
+type EnvConfigurations = {
 	SERVER_PORT: number;
 	MANAGEMENT_PORT: number;
-	SERVICE_API: string;
-	LOG_SERVER: string;
-	TELEMETRY_ENDPOINT: string;
-	TESTE_FEATURE: FeatureFlagValue | undefined;
-	APP_CONFIG_CONNECTION_STRING: string;
-	SERVICE_BUS_CONNECTION_STRING: string;
-	SOAP_SERVICE_URL: string;
-	FAIL_INJECTION_RATE: number;
-	SOAP_URL: string;
+	OTEL_COLLECTOR_TRACES: string;
+	OTEL_COLLECTOR_METRICS: string;
 	TEMPORAL_ADDRESS: string;
+	API_KEY: string;
+	API_GATEWAY_URL: string;
+	SOAP_SERVICE_URL: string;
+	RATE_LIMITER_REQUEST: number;
+	RATE_LIMITER_INTERVAL_SECONDS: number;
 };
 
-export const ConfigurationSchema = BuildSchema<Configuration>({
+type PocConfigService = {
+	APP_CONFIG_CONNECTION_STRING: string;
+	EVENT_HUB_ENDPOINT?: string;
+	EVENT_HUB_CONSUMER_GROUP?: string;
+	EVENT_HUB_NAME?: string;
+};
+
+const PocConfigServiceSchema: Joi.SchemaMap<PocConfigService> = {
+	EVENT_HUB_ENDPOINT: Joi.string().optional(),
+	EVENT_HUB_CONSUMER_GROUP: Joi.string().optional(),
+	EVENT_HUB_NAME: Joi.string().optional(),
+};
+
+const EnvConfigurationsSchema: Joi.SchemaMap<EnvConfigurations> = {
 	SERVER_PORT: Joi.number().default(8080),
 	MANAGEMENT_PORT: Joi.number().default(8081),
-	SERVICE_NAME: Joi.string().required(),
-	SERVICE_API: UrlPattern().required(),
-	LOG_SERVER: UrlPattern().required(),
-	TELEMETRY_ENDPOINT: UrlPattern().required(),
-	SOAP_SERVICE_URL: UrlPattern().required(),
-	TESTE_FEATURE: Joi.object(),
-	FAIL_INJECTION_RATE: Joi.number().default(0.2),
-	TEMPORAL_ADDRESS: Joi.string().required(),
-});
-
-const AppProvider: PromiseProvider<Configuration> = (
-	config: Partial<Configuration>
-) => {
-	const service = AppConfigurationService.New({
-		conectionString: config.APP_CONFIG_CONNECTION_STRING,
-		keyVaultUri: undefined,
-	});
-	container
-		.bind<AppConfigurationService>(AppConfigurationService)
-		.toConstantValue(service);
-	const provider = AppConfigurationProvider.New(service, {
-		filter: {
-			keyFilter: "*",
-			labelFilter: config.SERVICE_NAME,
-		},
-	});
-	return Promise.resolve(provider);
+	OTEL_COLLECTOR_TRACES: UrlPattern().required(),
+	OTEL_COLLECTOR_METRICS: UrlPattern().required(),
+	TEMPORAL_ADDRESS: UrlPattern().required(),
+	API_GATEWAY_URL: UrlPattern().required(),
+	API_KEY: Joi.string().required(),
+	SOAP_SERVICE_URL: UrlPattern().optional(),
+	RATE_LIMITER_REQUEST: Joi.number().default(10),
+	RATE_LIMITER_INTERVAL_SECONDS: Joi.number().default(1),
 };
 
-const AppWatcher = (config: Partial<Configuration>) => {
-	const service = container.get<AppConfigurationService>(
-		AppConfigurationService
-	);
-	const watcher = AppConfigurationWatcher.WithAzureServiceBus({
-		service,
-		connectionString: config.SERVICE_BUS_CONNECTION_STRING || "",
-		filter: {
-			keyFilter: "*",
-			labelFilter: config.SERVICE_NAME,
-		},
-		topicName: "teste",
-		subscriptionName: "",
-	});
-	return Promise.resolve(watcher);
-};
+export type Configuration = BaseConfiguration &
+	FeatureFlags &
+	EnvConfigurations &
+	PocConfigService;
+
+export const ConfigurationSchema: Joi.ObjectSchema<Configuration> =
+	ConfigurationSchemaBuilder.GivenConfiguration<Configuration>()
+		.With(EnvConfigurationsSchema)
+		.With(FeatureFlagSchema)
+		.With(PocConfigServiceSchema)
+		.Build();

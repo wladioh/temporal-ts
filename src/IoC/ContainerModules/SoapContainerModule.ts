@@ -17,7 +17,7 @@ export const SoapContainerModule = (
 		const cache = container.get<ICacheProvider>(TYPES.Cache);
 		const loggerSoap = logManager.Get("HTTP_SOAP_SERVICE");
 		const client = await ClientSoapBuilder.New()
-			.ForUrl(config.SOAP_SERVICE_URL)
+			.ForUrl(config.API_GATEWAY_URL)
 			.WithLogger(loggerSoap)
 			.WithResiliency({
 				timeout: {

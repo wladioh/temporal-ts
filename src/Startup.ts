@@ -4,10 +4,13 @@ import { Configuration, ConfigurationSchema } from "./Configuration";
 import { YamlProvider, YamlWatcher } from "@app-config-yaml";
 import { StartupBuilder } from "@app-inversify";
 import { ConfigureServices } from "./ConfigureServices";
-import { Application } from "./Application";
+import { RunApplication } from "./Application";
+import { PinoAdapterBuilder } from "@utils/PinoAdapterBuilder";
 
-StartupBuilder.Given<Configuration>(ConfigurationSchema)
+StartupBuilder.Given<Configuration>(ConfigurationSchema, PinoAdapterBuilder)
 	.WithConfigureServices(ConfigureServices)
 	.WithConfigProvider(YamlProvider.New("./configs/*.yaml"))
 	.WithConfigWatcher(YamlWatcher.New("./configs/*.yaml"))
-	.Run(Application);
+	// .WithConfigProvider(AppProvider)
+	// .WithConfigWatcher(AppWatcher)
+	.Run(RunApplication);

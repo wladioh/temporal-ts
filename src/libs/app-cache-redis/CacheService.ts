@@ -1,4 +1,4 @@
-import { IPolicy, Policy } from "cockatiel";
+import { IPolicy, noop } from "cockatiel";
 import { RedisInstance, RedisInstanceType } from "./RedisInstance";
 import { ICacheProvider } from "@app-api/ICacheProvider";
 import { ILogger } from "@app-api/LoggerApi";
@@ -16,7 +16,7 @@ export class RedisCacheProvider implements ICacheProvider {
 		private compression: ICacheCompression,
 		policy?: IPolicy
 	) {
-		this.policy = policy ?? Policy.noop;
+		this.policy = policy ?? noop;
 		this.client.on("connect", () => {
 			logger.info("Redis connected with success.");
 		});

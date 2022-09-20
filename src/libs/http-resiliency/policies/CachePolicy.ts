@@ -1,5 +1,4 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { CancellationToken } from "cockatiel";
 import lodash from "lodash";
 
 type CacheResponse = {
@@ -58,19 +57,24 @@ export type AxiosRequestCacheConfig = CacheConfig & {
 };
 
 type Executor = (
-	config: AxiosRequestConfig,
-	cancellationToken: CancellationToken
+	config: AxiosRequestConfig
 ) => AxiosResponse | Promise<AxiosResponse>;
 export class CachePolicy {
 	constructor(
 		private provider: ICacheProvider,
 		private readonly cacheConfig: Partial<CacheConfig>
 	) {}
+	safeParseJson(json: string): unknown | boolean {
+		try {
+			return JSON.parse(json);
+		} catch (e) {
+			return false;
+		}
+	}
 
 	async execute(
 		config: AxiosRequestConfig,
-		executor: Executor,
-		cancellationToken = CancellationToken.None
+		executor: Executor
 	): Promise<AxiosResponse> {
 		const cacheConfig: AxiosRequestCacheConfig = lodash.merge<any, any, any>(
 			{
@@ -106,14 +110,17 @@ export class CachePolicy {
 			}
 		}
 
-		const data = await executor(config, cancellationToken);
+		const data = await executor(config);
 
 		const allowedStatus = cacheConfig.status.includes(data.status);
-		data.data =
+		const jsonResponse =
+			!data.isFallback &&
 			data.headers["content-type"].includes("application/json") &&
-			typeof data.data === "string"
-				? JSON.parse(data.data)
-				: data.data;
+			typeof data.data === "string";
+		if (jsonResponse) {
+			const json = this.safeParseJson(data.data);
+			data.data = json ? json : data.data;
+		}
 		cacheConfig.cacheIf = cacheConfig.cacheIf || (() => true);
 		if (
 			!data.isFallback &&

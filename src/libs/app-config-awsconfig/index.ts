@@ -1,26 +1,32 @@
 import {
-	AppConfigClient,
-	GetConfigurationCommand,
-} from "@aws-sdk/client-appconfig";
+	AppConfigDataClient,
+	GetLatestConfigurationCommand,
+} from "@aws-sdk/client-appconfigdata";
+
 import { IConfigurationProvider, KeyValue } from "@app-config";
 
 export class AWSAppConfigProvider implements IConfigurationProvider {
-	constructor(private service: AppConfigClient) {}
+	constructor(private service: AppConfigDataClient) {}
 
 	async Load(): Promise<KeyValue> {
-		const command = new GetConfigurationCommand({
-			Application: "",
-			Environment: "",
-			ClientId: "",
-			Configuration: "",
-		});
+		try {
+			const command = new GetLatestConfigurationCommand({
+				ConfigurationToken: undefined,
+			});
+			const result = await this.service.send(command);
 
-		const result = await this.service.send(command);
-		const content = new TextDecoder().decode(result.Content);
-		return JSON.parse(content);
+			const configs = result.Configuration?.toString();
+			if (configs) return JSON.parse(configs);
+			// process data.
+		} catch (error) {
+			// error handling.
+		} finally {
+			// finally.
+		}
+		return {};
 	}
 
-	static New(appService: AppConfigClient): AWSAppConfigProvider {
+	static New(appService: AppConfigDataClient): AWSAppConfigProvider {
 		return new AWSAppConfigProvider(appService);
 	}
 }

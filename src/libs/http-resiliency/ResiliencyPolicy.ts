@@ -1,5 +1,5 @@
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
-import { Policy, IPolicy } from "cockatiel";
+import { IPolicy, handleWhenResult, bulkhead, wrap } from "cockatiel";
 import { PartialDeep } from "type-fest";
 import lodash from "lodash";
 import { ILogger } from "@app-api/LoggerApi";
@@ -8,7 +8,7 @@ import { retryPolicy } from "./policies/RetryPolicy";
 import { timeoutPolicy } from "./policies/TimeoutPolicy";
 import { CachePolicy, createCachePolicy } from "./policies/CachePolicy";
 import { defaultConfig, PolicyConfig } from "./DefaultConfig";
-import { BuildResiliencyAdpter } from "./AxiosAdapter";
+import { BuildResiliencyAdapter } from "./AxiosAdapter";
 
 export type AxiosResiliencyConfig = AxiosRequestConfig & {
 	resiliency?: PartialDeep<PolicyConfig>;
@@ -26,7 +26,7 @@ export const CreateResiliencyConfig = (
 	);
 	const cachePolicy = createCachePolicy(finalConfig.cache);
 	const policy = config?.policy || resiliencyPolicyBuild(logger, finalConfig);
-	const adapter = BuildResiliencyAdpter(policy, cachePolicy);
+	const adapter = BuildResiliencyAdapter(policy, cachePolicy);
 	return {
 		...config,
 		adapter,
@@ -38,11 +38,11 @@ const resiliencyPolicyBuild = (
 	logger: ILogger,
 	finalConfig: PolicyConfig
 ): IPolicy => {
-	const handlerResults = Policy.handleWhenResult((it: AxiosResponse) =>
+	const handlerResults = handleWhenResult((it: AxiosResponse) =>
 		finalConfig.handleWhenStatus.includes(it.status)
 	).orWhen((err: AxiosError) => {
 		return (
-			err.code === "ECONNABORTED" ||
+			["ECONNABORTED", "ECONNREFUSED"].includes(err.code ?? "") ||
 			finalConfig.handleWhenStatus.includes(err.response?.status || 0)
 		);
 	});
@@ -55,9 +55,11 @@ const resiliencyPolicyBuild = (
 	const retry = retryPolicy(handlerResults, finalConfig.retry, logger);
 	const timeout = timeoutPolicy(finalConfig.timeout, logger);
 
-	const bulkhead = Policy.bulkhead(
-		finalConfig.bulkhead.limitParalleRequest,
+	const bulkheadPolicy = bulkhead(
+		finalConfig.bulkhead.limitParallelRequest,
 		finalConfig.bulkhead.queueSize
 	);
-	return Policy.wrap(timeout, retry, breaker, bulkhead);
+	bulkheadPolicy.onReject((data) => console.log(data));
+	bulkheadPolicy.onFailure((data) => console.log(data));
+	return wrap(timeout, retry, breaker, bulkheadPolicy);
 };

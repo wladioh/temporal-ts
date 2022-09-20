@@ -8,62 +8,100 @@ import {
 	parseSecretReference,
 	secretReferenceContentType,
 } from "@azure/app-configuration";
-import { DefaultAzureCredential } from "@azure/identity";
-import { SecretClient } from "@azure/keyvault-secrets";
+import {
+	AzureCliCredential,
+	ChainedTokenCredential,
+	ManagedIdentityCredential,
+	EnvironmentCredential,
+} from "@azure/identity";
+import {
+	SecretClient,
+	parseKeyVaultSecretIdentifier,
+} from "@azure/keyvault-secrets";
 import { KeyValue } from "@app-config";
+
 export type AppConfigurationConfig = {
-	conectionString: string;
-	keyVaultUri: string;
+	connectionString: string;
 };
 export class AppConfigurationService {
-	constructor(
-		private _appConfigClient: AppConfigurationClient,
-		private secretClient?: SecretClient
-	) {}
+	private keyVaults: Map<string, SecretClient> = new Map();
+	private _appConfigClient: AppConfigurationClient;
+	private _credential: ChainedTokenCredential;
+	constructor(connectionString: string) {
+		this._credential = new ChainedTokenCredential(
+			new ManagedIdentityCredential(),
+			new AzureCliCredential(),
+			new EnvironmentCredential()
+		);
+		this._appConfigClient = new AppConfigurationClient(
+			connectionString,
+			this._credential
+		);
+	}
 
 	public async List(
 		filter: ListConfigurationSettingsOptions
 	): Promise<KeyValue> {
 		const listConfig = this._appConfigClient.listConfigurationSettings(filter);
 		const configs = {};
-		for await (const setting of listConfig) {
-			const [newKey, value] = await this.ParserConfig(setting);
-			configs[newKey] = value;
+		try {
+			for await (const setting of listConfig) {
+				const [newKey, value] = await this.ParserConfig(setting);
+				configs[newKey] = value;
+			}
+		} catch (error) {
+			console.log(error);
 		}
 		return configs;
 	}
-
-	private async ParserConfig(
+	private async ParseKeyVaultSecret(
 		setting: ConfigurationSetting<string>
 	): Promise<[string, string | undefined | FeatureFlagValue]> {
+		const parsedSecretReference = parseSecretReference(setting);
+		const { name: secretName, vaultUrl } = parseKeyVaultSecretIdentifier(
+			parsedSecretReference.value.secretId
+		);
+		const client: SecretClient =
+			this.keyVaults[vaultUrl] ??
+			(this.keyVaults[vaultUrl] = new SecretClient(vaultUrl, this._credential));
+		try {
+			const secret = await client.getSecret(secretName);
+			return [parsedSecretReference.key, secret.value];
+		} catch (err: any) {
+			const error = err as { code: string; statusCode: number };
+			if (error.code === "SecretNotFound" && error.statusCode === 404) {
+				throw new Error(
+					`\n Secret is not found, make sure the secret ${parsedSecretReference.value.secretId} is present in your keyvault account;\n Original error - ${error}`
+				);
+			} else {
+				throw err;
+			}
+		}
+	}
+	private async ParserConfig(
+		setting: ConfigurationSetting<string>
+	): Promise<
+		[
+			string,
+			string | undefined | FeatureFlagValue | ConfigurationSetting<string>
+		]
+	> {
 		switch (setting.contentType) {
-			case secretReferenceContentType:
-				if (this.secretClient) {
-					const parsedSecretReference = parseSecretReference(setting);
-					const key = parsedSecretReference.value.secretId.replace(
-						`${this.secretClient.vaultUrl}secrets/`,
-						""
-					);
-					const secret = await this.secretClient.getSecret(key);
-					return [parsedSecretReference.key, secret.value];
-				}
-				return [setting.key, undefined];
-			case featureFlagContentType:
+			case secretReferenceContentType: {
+				return this.ParseKeyVaultSecret(setting);
+			}
+			case featureFlagContentType: {
 				const flag = parseFeatureFlag(setting);
-				return [flag.value.id || flag.key, flag.value];
+				return [flag.value.id || flag.key, setting.value];
+			}
 			default:
 				return [setting.key, setting.value];
 		}
 	}
 	static New(config: Partial<AppConfigurationConfig>) {
-		if (!config.conectionString)
+		if (!config.connectionString)
 			throw new Error("APP CONFIGURATION CONNECTION STRING IS REQUIRED.");
-		const client = new AppConfigurationClient(config.conectionString);
-		let secretClient: SecretClient | undefined;
-		if (config.keyVaultUri) {
-			const credential = new DefaultAzureCredential();
-			secretClient = new SecretClient(config.keyVaultUri, credential);
-		}
-		return new AppConfigurationService(client, secretClient);
+
+		return new AppConfigurationService(config.connectionString);
 	}
 }

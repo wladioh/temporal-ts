@@ -1,9 +1,8 @@
-import { pathsToModuleNameMapper } from "ts-jest/utils";
+import { pathsToModuleNameMapper } from "ts-jest";
 // In the following statement, replace `./tsconfig` with the path to your `tsconfig` file
 // which contains the path mapping (ie the `compilerOptions.paths` option):
 import { compilerOptions } from "./tsconfig.json";
 import { Config } from "@jest/types";
-
 const config: Config.InitialOptions = {
 	rootDir: ".",
 	clearMocks: true,
@@ -12,10 +11,14 @@ const config: Config.InitialOptions = {
 	testPathIgnorePatterns: ["dist", "node_modules"],
 	moduleDirectories: ["<rootDir>/src", "node_modules"],
 	testResultsProcessor: "jest-sonar-reporter",
-
+	modulePathIgnorePatterns: ["src/mocks"],
+	coveragePathIgnorePatterns: ["src/mocks"],
 	// test coverage
 	coverageDirectory: "./coverage/",
-	collectCoverageFrom: ["src/**/*.{ts,tsx}"],
+	collectCoverageFrom: [
+		"!src/**/*.{ts,tsx}",
+		"src/(services|schema|controllers)/**/*",
+	],
 	// coverageThreshold: {
 	//   global: {
 	//     branches: 80,
@@ -24,6 +27,7 @@ const config: Config.InitialOptions = {
 	//     statements: 80,
 	//   },
 	// },
+	setupFiles: ["<rootDir>/tests/setup.ts"],
 	collectCoverage: true,
 	coverageReporters: [
 		"json",
@@ -31,16 +35,44 @@ const config: Config.InitialOptions = {
 		"text",
 		"clover",
 		"cobertura",
-		"lcov",
 		"text-summary",
 	],
-	reporters: ["default", ["jest-junit", { outputDirectory: "./coverage" }]],
+	reporters: [
+		"default",
+		[
+			"./node_modules/jest-html-reporter/dist",
+			{
+				pageTitle: "Test Report",
+				outputPath: ".reports/test-report.html",
+			},
+		],
+		[
+			"jest-junit",
 
-	moduleFileExtensions: ["js", "ts"],
+			{
+				suiteName: "jest tests",
+				outputDirectory: "./coverage",
+				outputName: "test-report.xml",
+				uniqueOutputName: "false",
+				classNameTemplate: "{classname}-{title}",
+				titleTemplate: "{classname}-{title}",
+				ancestorSeparator: " > ",
+				usePathForSuiteName: "true",
+			},
+		],
+	],
+
+	moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
 	testEnvironment: "node",
 	preset: "ts-jest",
 	transform: {
-		"^.+\\.(t|j)s$": "ts-jest",
+		"^.+\\.(t|j)s$": [
+			"ts-jest",
+			{
+				compiler: "ttypescript",
+				tsconfig: "./tsconfig.json",
+			},
+		],
 	},
 	moduleNameMapper: {
 		...pathsToModuleNameMapper(compilerOptions.paths, {
@@ -48,11 +80,6 @@ const config: Config.InitialOptions = {
 		}),
 	},
 	roots: ["<rootDir>"],
-	modulePaths: ["<rootDir>"],
-	globals: {
-		"ts-jest": {
-			tsconfig: "./tsconfig.json",
-		},
-	},
+	modulePaths: [compilerOptions.baseUrl],
 };
 export default config;

@@ -32,7 +32,7 @@
 	},
 	"routes": {
 		"routesDir": "src/routes",
-		"authenticationModule": "src/utils/middlewares/authentication.ts",
+		"authenticationModule": "src/utils/middlewares/authenticationTsoa.ts",
 		"iocModule": "src/IoC/iocContainer.ts"
 	},
 	"compilerOptions": {

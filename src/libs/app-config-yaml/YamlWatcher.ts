@@ -18,7 +18,7 @@ export class YamlWatcher implements IWatcherStrategy {
 			.map((it) => path.resolve(it))
 			.filter((it) => this.yamlExt.indexOf(path.extname(it)) >= 0);
 	}
-	private async onChaged(file: string, valuesCallback: CallBack) {
+	private async onChange(file: string, valuesCallback: CallBack) {
 		const data = fs.readFileSync(file, "utf8");
 		const doc = yaml.load(data);
 		valuesCallback(<any>doc);
@@ -26,7 +26,7 @@ export class YamlWatcher implements IWatcherStrategy {
 	Watch(valuesCallback: CallBack): Promise<void> {
 		const files = this.files();
 		for (const file of files) {
-			fs.watch(file, () => this.onChaged(file, valuesCallback));
+			fs.watch(file, () => this.onChange(file, valuesCallback));
 		}
 		return Promise.resolve();
 	}

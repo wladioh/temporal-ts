@@ -56,4 +56,5 @@ COPY --from=build /app/dist .
 RUN true
 # expose port and define CMD
 EXPOSE 8080 8081
-CMD pm2-runtime ./server.js
+USER node
+CMD pm2-runtime ./index.js
