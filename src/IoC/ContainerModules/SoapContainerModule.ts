@@ -16,21 +16,21 @@ export const SoapContainerModule = (
 		const logManager = container.get<LoggerManager>(LoggerManager);
 		const cache = container.get<ICacheProvider>(TYPES.Cache);
 		const loggerSoap = logManager.Get("HTTP_SOAP_SERVICE");
-		const client = await ClientSoapBuilder.New()
-			.ForUrl(config.API_GATEWAY_URL)
-			.WithLogger(loggerSoap)
-			.WithResiliency({
-				timeout: {
-					globalDuration: 5000,
-					requestDuration: 2000,
-				},
-				cache: {
-					provider: cache,
-					ignoreCache: ignoreCache,
-				},
-			})
-			.WithInterceptors(new SoapHandlerResultInterceptor())
-			.Build<ISoapService>();
-		bind<ISoapService>(TYPES.SOAP_CLIENT).toConstantValue(client);
+		// const client = await ClientSoapBuilder.New()
+		// 	.ForUrl("")
+		// 	.WithLogger(loggerSoap)
+		// 	.WithResiliency({
+		// 		timeout: {
+		// 			globalDuration: 5000,
+		// 			requestDuration: 2000,
+		// 		},
+		// 		cache: {
+		// 			provider: cache,
+		// 			ignoreCache: ignoreCache,
+		// 		},
+		// 	})
+		// 	.WithInterceptors(new SoapHandlerResultInterceptor())
+		// 	.Build<ISoapService>();
+		// bind<ISoapService>(TYPES.SOAP_CLIENT).toConstantValue(client);
 	});
 };

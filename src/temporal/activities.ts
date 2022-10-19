@@ -8,8 +8,9 @@ import {
 } from "./workflows/orders";
 import { WorkflowClient } from "@temporalio/client";
 import { temporal } from "@temporalio/proto";
+const WorkflowExecutionStatus = temporal.api.enums.v1.WorkflowExecutionStatus;
 
-const failChange = 0;
+const failChange = 1;
 const fail = (customFailChange?: number) => {
 	const attempt = Math.random() * 100;
 	const change = customFailChange || failChange;
@@ -39,8 +40,7 @@ export const cancelOrder = async (
 	const describe = await handle.describe();
 	const wfIsRunning =
 		describe.status.code ==
-		temporal.api.enums.v1.WorkflowExecutionStatus
-			.WORKFLOW_EXECUTION_STATUS_RUNNING;
+		WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING;
 	if (wfIsRunning) {
 		await handle.signal(signalCancelOrder);
 	}
@@ -80,10 +80,19 @@ export async function requestPayment(
 	const { logger, container } = getContext();
 	logger.info(`requestPayment ${orderId}!`);
 	fail();
-	const client = container.get<WorkflowClient>(WorkflowClient);
-	const handle = await client.getHandle(cartId);
-	await handle.signal(signalConfirmOrder);
-	return Context.current().info.activityId;
+	try {
+		const client = container.get<WorkflowClient>(WorkflowClient);
+		const handle = client.getHandle(cartId);
+		const { status } = await handle.describe();
+		if (
+			status.code == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING
+		)
+			await handle.signal(signalConfirmOrder);
+		return Context.current().info.activityId;
+	} catch (err) {
+		logger.error(err);
+		throw err;
+	}
 }
 
 export async function cancelPayment(id: string): Promise<string> {

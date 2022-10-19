@@ -1,4 +1,4 @@
-import { container, LoggerFactory } from "@app-inversify";
+import { LoggerFactory } from "@app-inversify";
 import { ILogger } from "@app-log";
 import { Context } from "@temporalio/activity";
 import {
@@ -25,7 +25,7 @@ export class ActivityInboundLogInterceptor
 {
 	public readonly logger: ILogger;
 
-	constructor(ctx: Context, logFactory: LoggerFactory) {
+	constructor(ctx: Context, logFactory: LoggerFactory, container: Container) {
 		this.logger = logFactory(ctx.info.activityType);
 
 		// Set a logger instance on the current Activity Context to provide

@@ -1,0 +1,52 @@
+server:
+  config:
+    persistence:
+      default:
+        driver: "sql"
+
+        sql:
+          driver: "mysql"
+          host: mysql.temporal
+          port: 3306
+          database: temporal
+          user: root
+          password: password
+          maxConns: 20
+          maxConnLifetime: "1h"
+
+      visibility:
+        driver: "sql"
+
+        sql:
+          driver: "mysql"
+          host: mysql.temporal
+          port: 3306
+          database: temporal_visibility
+          user: root
+          password: password
+          maxConns: 20
+          maxConnLifetime: "1h"
+
+cassandra:
+  enabled: false
+mysql:
+  enabled: true
+elasticsearch:
+  enabled: false
+  replicas: 1
+  extraEnvs:
+    - name: discovery.type
+      value: single-node
+    - name: cluster.initial_master_nodes
+      value: null
+postgresql:
+  enabled: false
+grafana:
+  enabled: false
+prometheus:
+  enabled: false
+schema:
+  setup:
+    enabled: false
+  update:
+    enabled: false

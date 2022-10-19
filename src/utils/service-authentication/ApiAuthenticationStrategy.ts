@@ -15,7 +15,6 @@ export class ApiAuthenticationStrategy implements IAuthorizationStrategy {
 	) {}
 
 	async getToken(api: AxiosInstance): Promise<string> {
-		const oafApiUrl = this.config.API_GATEWAY_URL;
 		const currentToken = this.token;
 		await this.lock.acquire();
 		try {
@@ -24,7 +23,7 @@ export class ApiAuthenticationStrategy implements IAuthorizationStrategy {
 			}
 			this.logger.info("requesting oaf token");
 			const response = await api.post(
-				oafApiUrl,
+				"",
 				{
 					value: "SAME BODY TO AUTHENTICATION",
 				},
@@ -33,9 +32,6 @@ export class ApiAuthenticationStrategy implements IAuthorizationStrategy {
 						cacheIf: () => false,
 					},
 					anonymous: true,
-					headers: {
-						"x-api-key": this.config.API_KEY,
-					},
 				}
 			);
 			this.token = `Bearer ${response.data.IdToken}`;

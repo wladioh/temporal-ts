@@ -1,0 +1,6 @@
+[submodule "temporal-local-cluster/helm-chart"]
+	path = temporal-local-cluster/helm-chart
+	url = git@github.com:temporalio/helm-charts.git
+[submodule "temporal-local-cluster/temporal"]
+	path = temporal-local-cluster/temporal
+	url = git@github.com:temporalio/temporal.git

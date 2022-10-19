@@ -64,10 +64,7 @@ export const RunApplication = async (container: Container): Promise<void> => {
 	const config = container.get<Configuration>(TYPES.Configuration);
 	const application = await BuildApplication(container);
 
-	const temporalWorker = TemporalWorkerStart(
-		config,
-		container.get<LoggerFactory>(TYPES.LoggerFactory)
-	);
+	const temporalWorker = TemporalWorkerStart(config, container);
 	const httpServer = HttpServer(
 		config.SERVER_PORT,
 		config.MANAGEMENT_PORT,

@@ -6,6 +6,7 @@ const configMock = {
 	SESSION_VALIDATION_FEATURE:
 		'{"id":"SESSION_VALIDATION_FEATURE","description":"","enabled":false,"conditions":{"client_filters":[]}}',
 	API_GATEWAY_URL: "https://teste.midway.io",
+	TEMPORAL_ADDRESS: "https://localhost:7233",
 	API_KEY: "SAME_API_KEY",
 	OTEL_COLLECTOR_TRACES: "https://collector.midway.io/traces",
 	OTEL_COLLECTOR_METRICS: "https://collector.midway.io/metrics",

@@ -13,6 +13,6 @@ export class ApiAuthenticationInterceptor extends AuthInterceptor {
 	public InjectToken(axiosConfig: AxiosRequestConfig, token: string): void {
 		axiosConfig.headers = axiosConfig.headers ?? {};
 		axiosConfig.headers["x-custom-header-token"] = token;
-		axiosConfig.headers["x-api-key"] = this.configuration.API_KEY;
+		//axiosConfig.headers["x-api-key"] = this.configuration.API_KEY;
 	}
 }

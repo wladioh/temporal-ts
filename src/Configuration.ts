@@ -12,9 +12,6 @@ type EnvConfigurations = {
 	OTEL_COLLECTOR_TRACES: string;
 	OTEL_COLLECTOR_METRICS: string;
 	TEMPORAL_ADDRESS: string;
-	API_KEY: string;
-	API_GATEWAY_URL: string;
-	SOAP_SERVICE_URL: string;
 	RATE_LIMITER_REQUEST: number;
 	RATE_LIMITER_INTERVAL_SECONDS: number;
 };
@@ -37,10 +34,7 @@ const EnvConfigurationsSchema: Joi.SchemaMap<EnvConfigurations> = {
 	MANAGEMENT_PORT: Joi.number().default(8081),
 	OTEL_COLLECTOR_TRACES: UrlPattern().required(),
 	OTEL_COLLECTOR_METRICS: UrlPattern().required(),
-	TEMPORAL_ADDRESS: UrlPattern().required(),
-	API_GATEWAY_URL: UrlPattern().required(),
-	API_KEY: Joi.string().required(),
-	SOAP_SERVICE_URL: UrlPattern().optional(),
+	TEMPORAL_ADDRESS: Joi.string().required(),
 	RATE_LIMITER_REQUEST: Joi.number().default(10),
 	RATE_LIMITER_INTERVAL_SECONDS: Joi.number().default(1),
 };

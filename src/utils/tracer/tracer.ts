@@ -7,6 +7,7 @@ import { Configuration } from "@config";
 import { addIgnoredOutgoingRequests, provider } from "./instrumentation";
 import { CompressionAlgorithm } from "@opentelemetry/otlp-exporter-base";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { container } from "@app-inversify";
 // Setting the default Global logger to use the Console
 // And optionally change the logging level (Defaults to INFO)
 //diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
@@ -23,6 +24,7 @@ export const registerTracer = (config: Configuration): NodeTracerProvider => {
 		compression: CompressionAlgorithm.GZIP,
 	};
 	const exporter = new OTLPTraceExporter(collectorOptions);
+	container.bind(OTLPTraceExporter).toConstantValue(exporter);
 	provider.addSpanProcessor(new BatchSpanProcessor(exporter));
 	provider.register();
 	return provider;
